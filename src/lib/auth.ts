@@ -5,6 +5,7 @@ import { prisma } from "./prisma"
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
+  debug: process.env.NODE_ENV === "development",
   session: {
     strategy: "jwt",
   },
@@ -12,9 +13,28 @@ export const authOptions: NextAuthOptions = {
     GithubProvider({
       clientId: process.env.GITHUB_ID!,
       clientSecret: process.env.GITHUB_SECRET!,
+      profile(profile) {
+        return {
+          id: profile.id.toString(),
+          name: profile.name || profile.login,
+          email: profile.email,
+          image: profile.avatar_url,
+        }
+      },
     }),
   ],
+  pages: {
+    signIn: "/api/auth/signin",
+    signOut: "/api/auth/signout",
+    error: "/api/auth/error",
+  },
   callbacks: {
+    async signIn({ user, account, profile }) {
+      if (account?.provider === "github") {
+        return true
+      }
+      return false
+    },
     async session({ token, session }: any) {
       if (token && session.user) {
         session.user.id = token.id
@@ -22,29 +42,16 @@ export const authOptions: NextAuthOptions = {
         session.user.email = token.email
         session.user.image = token.picture
       }
-
       return session
     },
-    async jwt({ token, user }) {
-      const dbUser = await prisma.user.findFirst({
-        where: {
-          email: token.email,
-        },
-      })
-
-      if (!dbUser) {
-        if (user) {
-          token.id = user?.id
-        }
-        return token
+    async jwt({ token, user, account }) {
+      if (user) {
+        token.id = user.id
       }
-
-      return {
-        id: dbUser.id,
-        name: dbUser.name,
-        email: dbUser.email,
-        picture: dbUser.image,
+      if (account) {
+        token.accessToken = account.access_token
       }
+      return token
     },
   },
 } 
