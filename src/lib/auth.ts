@@ -23,7 +23,8 @@ export const authOptions: NextAuthOptions = {
     maxAge: 60 * 60, // 1 hour
   },
   pages: {
-    signIn: "/api/auth/signin",
+    signIn: "/auth/signin",
+    error: "/auth/error",
   },
   providers: [
     GithubProvider({
