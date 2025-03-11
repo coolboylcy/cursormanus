@@ -23,11 +23,6 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
-  pages: {
-    signIn: "/api/auth/signin",
-    signOut: "/api/auth/signout",
-    error: "/api/auth/error",
-  },
   callbacks: {
     async signIn({ user, account, profile }) {
       if (account?.provider === "github") {
