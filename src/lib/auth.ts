@@ -44,41 +44,48 @@ export const authOptions: NextAuthOptions = {
       name: "Guest Access",
       credentials: {},
       async authorize() {
-        const guestUser = {
-          id: randomBytes(16).toString("hex"),
-          name: generateGuestName(),
-          email: `guest_${Date.now()}@temp.cursormanus.app`,
-          image: `https://api.dicebear.com/7.x/bottts/svg?seed=${Date.now()}`,
-          isGuest: true,
-        }
-
-        // 创建临时用户记录
-        const user = await prisma.user.create({
-          data: {
-            id: guestUser.id,
-            name: guestUser.name,
-            email: guestUser.email,
-            image: guestUser.image,
-          },
-        })
-
-        // 1小时后删除用户
-        setTimeout(async () => {
-          try {
-            await prisma.user.delete({
-              where: { id: user.id },
-            })
-          } catch (error) {
-            console.error("Error deleting temporary user:", error)
+        try {
+          const guestUser = {
+            id: randomBytes(16).toString("hex"),
+            name: generateGuestName(),
+            email: `guest_${Date.now()}@temp.cursormanus.app`,
+            image: `https://api.dicebear.com/7.x/bottts/svg?seed=${Date.now()}`,
+            isGuest: true,
           }
-        }, 60 * 60 * 1000)
 
-        return guestUser
+          // 创建临时用户记录
+          const user = await prisma.user.create({
+            data: {
+              id: guestUser.id,
+              name: guestUser.name,
+              email: guestUser.email,
+              image: guestUser.image,
+              emailVerified: new Date(), // 添加必要的字段
+            },
+          })
+
+          // 1小时后删除用户
+          setTimeout(async () => {
+            try {
+              await prisma.user.delete({
+                where: { id: user.id },
+              })
+            } catch (error) {
+              console.error("Error deleting temporary user:", error)
+            }
+          }, 60 * 60 * 1000)
+
+          return guestUser
+        } catch (error) {
+          console.error("Error creating guest user:", error)
+          return null
+        }
       },
     }),
   ],
   callbacks: {
     async signIn({ user, account }) {
+      if (!user) return false
       if (account?.provider === "github" || account?.provider === "guest") {
         return true
       }
